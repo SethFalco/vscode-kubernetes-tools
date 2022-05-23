@@ -134,7 +134,7 @@ function onRun() {
 }
 
 function init() {
-    const runBtn = document.getElementById('runBtn');
+    const runBtn = document.getElementById('run-button');
     runBtn.addEventListener('click', onRun);
 
     const stopBtn = document.getElementById('stopBtn');
@@ -168,7 +168,7 @@ function init() {
         });
     });
 
-    const bottomBtn = document.getElementById('bottomBtn');
+    const bottomBtn = document.getElementById('bottom-button');
     bottomBtn.addEventListener('click', (_event) => {
         scrollToBottom();
     });
@@ -202,12 +202,12 @@ function init() {
         typingTimer = setTimeout(runFilter, 500);
     });
 
-    const logPanel = document.getElementById('logPanel');
-    const toBottom = debounce(function () {
-        const st = logPanel.scrollTop;
+    const logsElement = document.getElementById('logs');
+    const toBottom = debounce(() => {
+        const st = logsElement.scrollTop;
         if (st > lastScrollTop) {
             // scroll down
-            isToBottom = (logPanel.scrollTop + window.innerHeight) >= logPanel.scrollHeight;
+            isToBottom = (logsElement.scrollTop + window.innerHeight) >= logsElement.scrollHeight;
         } else {
             // scroll up
             isToBottom = false;
@@ -215,7 +215,7 @@ function init() {
         lastScrollTop = st <= 0 ? 0 : st;
         renderByPagination();
     }, 250);
-    logPanel.addEventListener("scroll", toBottom);
+    logsElement.addEventListener("scroll", toBottom);
 
     vscode.postMessage({
         command: 'postInitialize'
@@ -235,7 +235,6 @@ function resetFilter() {
 function runFilter() {
     emptyContent();
     saveFilteredContent();
-    setHeightContentPanel();
     renderByPagination();
 }
 
@@ -243,7 +242,7 @@ function changeVisibilityAfterRun() {
     if (getDestinationValue() === 'Terminal') {
         return;
     }
-    document.getElementById('runBtn').classList.add('display-none');
+    document.getElementById('run-button').classList.add('display-none');
     if (isFollow()) {
         switchClass('stopBtn', 'display-none', 'display-inline-block');
     }
@@ -253,7 +252,7 @@ function changeVisibilityAfterRun() {
 function changeVisibilityAfterClear() {
     if (document.getElementById('stopBtn').classList.contains('display-none')) {
         switchClass('clearBtn', 'display-inline-block', 'display-none');
-        switchClass('runBtn', 'display-none', 'display-inline-block');
+        switchClass('run-button', 'display-none', 'display-inline-block');
     }
 }
 
@@ -272,7 +271,7 @@ function switchClass(id, classToRemove, classToAdd) {
 }
 
 function isRun() {
-    return document.getElementById('runBtn').classList.contains('display-none');
+    return document.getElementById('run-button').classList.contains('display-none');
 }
 
 function isFiltering() {
@@ -310,7 +309,6 @@ function clear() {
         resetContent();
         resetFilter();
     }
-    setHeightContentPanel(true);
     emptyContent();
 }
 
@@ -339,20 +337,8 @@ function updateContent(newContent) {
     }
 
     content = saveFilteredContent(content);
-    setHeightContentPanel();
     renderByPagination(content);
     switchClass('clearBtn', 'display-none', 'display-inline-block');
-}
-
-function setHeightContentPanel(removeStyle) {
-    if (removeStyle) {
-        document.getElementById('innerLogPanel').style.removeProperty('height');
-    } else {
-        const content = isFiltering() ? filteredContent : fullPageContent;
-        const rows = Object.keys(content).length;
-        const heightDiv = getDefaultDivHeightValue();
-        document.getElementById('innerLogPanel').style.height = `${heightDiv * rows}px`;
-    }
 }
 
 function saveFilteredContent(content) {
@@ -485,8 +471,7 @@ function renderByPagination(contentToAdd) {
     }
     const fullFilteredContent = isFiltering() ? filteredContent : fullPageContent;
     const totalRows = Object.keys(fullFilteredContent).length - 1;
-    const heightDiv = getDefaultDivHeightValue();
-    const currentPosition = document.getElementById('logPanel').scrollTop;
+    const currentPosition = document.getElementById('logsElement').scrollTop;
     const referenceRow = Math.floor(currentPosition / heightDiv);
     // identify rows range to draw
     let lowerRange = referenceRow - 250 < 0 ? 0 : referenceRow - 250;
@@ -503,28 +488,23 @@ function renderByPagination(contentToAdd) {
                 removeChildren(upperRange + 1, uppestRowInDOM);
                 upperRange = lowestRowInDOM - 1;
                 isPrepend = true;
-                document.getElementById('content').style.top = `${lowerRange * heightDiv}px`;
             } else {
                 emptyContent();
-                document.getElementById('content').style.top = `${lowerRange * heightDiv}px`;
             }
             const content = extractRowsToDraw(fullFilteredContent, lowerRange, upperRange);
             render(beautifyLines(content), lowerRange, isPrepend);
         } else if (upperRange > uppestRowInDOM) {
             if (lowerRange <= uppestRowInDOM) {
                 removeChildren(lowestRowInDOM, lowerRange - 1);
-                document.getElementById('content').style.top = `${lowerRange * heightDiv}px`;
                 lowerRange = uppestRowInDOM + 1;
             } else {
                 emptyContent();
-                document.getElementById('content').style.top = `${lowerRange * heightDiv}px`;
             }
             const content = extractRowsToDraw(fullFilteredContent, lowerRange, upperRange);
             render(beautifyLines(content), lowerRange, isPrepend);
         }
     } else {
         const content = extractRowsToDraw(fullFilteredContent, lowerRange, upperRange);
-        document.getElementById('content').style.top = `${lowerRange * heightDiv}px`;
         render(beautifyLines(content), lowerRange, isPrepend);
     }
 }
@@ -703,10 +683,6 @@ function getDestinationValue() {
 
 function isWrapEnabled() {
     return document.getElementById('wrap-chk').checked;
-}
-
-function getDefaultDivHeightValue() {
-    return document.getElementById('follow-lbl').offsetHeight;
 }
 
 (function () {

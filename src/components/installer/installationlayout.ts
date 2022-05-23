@@ -36,9 +36,11 @@ export function formatBin(tool: string, platform: Platform): string | null {
 }
 
 export function platformArch(os: string) {
-    if (process.arch === 'arm' && os === 'linux') {
+    const { arch } = process;
+
+    if (arch === 'arm' && os === 'linux') {
         return 'arm';
-    } else if (process.arch === 'arm64') {
+    } else if (arch === 'arm64') {
         return 'arm64';
     } else {
         return 'amd64';

@@ -1,178 +1,265 @@
 <!doctype html>
-<html>
+<html lang="en-US">
 <head>
     <meta charset="UTF-8">
     <title>Kubernetes logs</title>
-    <!-- meta http-equiv="Content-Security-Policy" -->
     <style>
-        vscode-select.w-130 {
-            width: 130px;
+        /** Reset **/
+        html, body, div, p, span, ol, ul, li {
+            margin: 0;
+            padding: 0;
         }
-        vscode-select.w-80 {
-            width: 80px;
+
+        html, body, #log-viewer {
+            height: 100%;
         }
-        .float-right {
-            float: right;
+
+        #log-viewer {
+            margin: .5em;
+            display: flex;
+            flex-direction: column;
         }
-        .mr-2 {
-            margin-right: 2px;
+
+        #controls {
+            display: flex;
+            gap: .5em;
+            justify-content: space-between;
         }
-        .mt-5 {
-            margin-top: 5px;
+
+        #control-fields {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5em;
+            height: fit-content;
         }
-        .ml-5 {
-            margin-left: 5px;
+
+        #control-buttons {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: .5em;
         }
-        .ml-10 {
-            margin-left: 10px;
+
+        #since-input, #since-select, #tail-input, #destination-select, #filter-select {
+            width: 10em;
         }
-        .mr-10 {
-            margin-right: 10px;
+
+        .control-buttons-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5em;
         }
-        .mr-50 {
-            margin-right: 50px;
+
+        .control-set {
+            display: flex;
+            gap: .5em;
+            height: fit-content;
         }
-        .position-relative {
-            position: relative;
+
+        vscode-button {
+            flex-grow: 1;
+            width: fit-content;
         }
-        .display-inline-block {
-            display: inline-block;
+
+        #bottom-label-large {
+            display: none;
         }
+
+        #save-label-large {
+            display: none;
+        }
+
+        #logs {
+            flex-grow: 1;
+            overflow-y: scroll;
+        }
+
         .display-none {
             display: none;
         }
-        .tooltip {
-            position: relative;
-            display: inline-block;
-        }
-        .tooltip .tooltiptext {
-            visibility: hidden;
-            text-align: center;
-            background-color: var(--vscode-settings-textInputBackground);
-            color: var(--vscode-foreground);
-            border-radius: 6px;
-            padding: 5px 0;
-            position: absolute;
-            z-index: 1;
-            width: 200px;
-            top: 100%;
-            left: 50%;
-            margin-left: -60px;
-        }
-        .tooltip:hover .tooltiptext {
-            visibility: visible;
-        }
+
         .white-space-pre {
             white-space: pre;
         }
+
         .white-space-wrap {
             white-space: pre-wrap;
             word-wrap: anywhere;
         }
+
         #content {
             color: var(--vscode-foreground)
         }
+
         .gl {
             color: #b5cea8;
         }
+
         .g {
             color: #6a9955;
         }
+
         .b {
             color: #569cd6;
         }
+
         .ol {
             color: #ce9178;
         }
+
         .r {
             color: #c50313;
         }
+
         .o {
             color: #c36741;
+        }
+
+        @media (min-width: 800px) {
+            #bottom-label-small {
+                display: none;
+            }
+
+            #bottom-label-large {
+                display: initial;
+            }
+        }
+
+        @media (min-width: 650px) {
+            #save-label-small {
+                display: none;
+            }
+
+            #save-label-large {
+                display: initial;
+            }
         }
     </style>
 </head>
 <body>
-    <div style="position: fixed; top: 15px; left: 2%; width: 100%; z-index: 9999;">
-        <div>
-            <div id="containers-panel" class="mr-10 display-none">
-                <div class="tooltip mr-2">Container:
-                    <span class="tooltiptext">Print the logs of this container. Defaults show all logs.</span>
+    <div id="log-viewer">
+        <div id="controls">
+            <div id="control-fields">
+                <div id="containers-panel" class="display-none">
+                    <vscode-label for="containers-select" title="Print the logs of this container. Defaults show all logs.">
+                        Container:
+                    </vscode-label>
+                </div>
+
+                <div class="control-set">
+                    <vscode-checkbox
+                        id="follow-chk"
+                        label="Follow Logs"
+                        title="Logs should be streamed.">
+                        Follow Logs
+                    </vscode-checkbox>
+                </div>
+
+                <div class="control-set">
+                    <vscode-checkbox
+                        id="timestamp-chk"
+                        label="Show Timestamps"
+                        title="Include the timestamp of each log in the output.">
+                        Show Timestamps
+                    </vscode-checkbox>
+                </div>
+
+                <div class="control-set">
+                    <vscode-checkbox
+                        id="wrap-chk"
+                        label="Wrap Lines"
+                        title="Long words should be broken and wrap onto the next line.">
+                        Wrap Lines
+                    </vscode-checkbox>
+                </div>
+
+                <div class="control-set">
+                    <vscode-label for="since-input" title="Only return logs newer than a relative duration like 5s, 2m, or 3h. Defaults to all logs.">
+                        Since:
+                    </vscode-label>
+                    <vscode-inputbox
+                        id="since-input"
+                        message="Only return logs newer than a relative duration like 5s, 2m, or 3h. Defaults to all logs."
+                        type="number"
+                        value="-1"
+                        min="-1">
+                    </vscode-inputbox>
+                    <vscode-single-select id="since-select">
+                        <vscode-option value="s" description="Set the duration unit to seconds." selected>
+                            Second(s)
+                        </vscode-option>
+                        <vscode-option value="m" description="Set the duration unit to minutes.">
+                            Minute(s)
+                        </vscode-option>
+                        <vscode-option value="h" description="Set the duration unit to hours.">
+                            Hour(s)
+                        </vscode-option>
+                    </vscode-single-select>
+                </div>
+
+                <div class="control-set">
+                    <vscode-label for="tail-input" title="Lines of recent log file to display. Defaults show all log lines.">
+                        Tail:
+                    </vscode-label>
+                    <vscode-inputbox
+                        id="tail-input"
+                        message="Lines of recent log file to display. Defaults show all log lines."
+                        type="number"
+                        value="-1"
+                        min="-1">
+                    </vscode-inputbox>
+                </div>
+
+                <div class="control-set">
+                    <vscode-label for="destination-select" title="Where to display logs.">
+                        Destination:
+                    </vscode-label>
+                    <vscode-single-select id="destination-select">
+                        <vscode-option value="Webview" description="Output the logs to this Webview." selected>
+                            Webview
+                        </vscode-option>
+                        <vscode-option value="Terminal" description="Output the logs to the terminal.">
+                            Terminal
+                        </vscode-option>
+                    </vscode-single-select>
+                </div>
+
+                <div class="control-set">
+                    <vscode-label for="filter-select">Filter:</vscode-label>
+                    <vscode-single-select id="filter-select">
+                        <vscode-option value="include" selected>that match</vscode-option>
+                        <vscode-option value="exclude">that don't match</vscode-option>
+                        <vscode-option value="after">after match</vscode-option>
+                        <vscode-option value="before">before match</vscode-option>
+                    </vscode-single-select>
+                    <vscode-inputbox id="filter-input" placeholder="Keywords…" ></vscode-inputbox>
                 </div>
             </div>
-
-            <div id="follow-lbl" class="tooltip mr-2">Follow Logs:
-                <span class="tooltiptext">Logs should be streamed.</span>
+            <div id="control-buttons">
+                <div class="control-buttons-section">
+                    <vscode-button id="run-button">Run</vscode-button>
+                    <vscode-button id="clearBtn" class="display-none">Clear</vscode-button>
+                    <vscode-button id="stopBtn" class="display-none">Stop</vscode-button>
+                </div>
+                <div class="control-buttons-section">
+                    <vscode-button id="bottom-button">
+                        <span id="bottom-label-small">Scroll to ↓</span>
+                        <span id="bottom-label-large">Scroll to Bottom</span>
+                    </vscode-button>
+                    <vscode-button id="resetBtn">Reset</vscode-button>
+                    <vscode-button id="saveSettingsBtn">
+                        <span id="save-label-small">💾  Settings</span>
+                        <span id="save-label-large">Save Settings</span>
+                    </vscode-button>
+                </div>
             </div>
-            <vscode-checkbox id="follow-chk"></vscode-checkbox>
-
-            <div class="tooltip mr-2">Show timestamp:
-                <span class="tooltiptext">Include timestamps on each line in the log output.</span>
-            </div>
-            <vscode-checkbox id="timestamp-chk"></vscode-checkbox>
-
-            <div class="tooltip mr-2">Since:
-                <span class="tooltiptext">Only return logs newer than a relative duration like 5s, 2m, or 3h. Defaults to all logs.</span>
-            </div>
-            <div class="mr-2" style="width: 50px; display: inline-block">
-                <vscode-inputbox id="since-input" type="number" value="-1"></vscode-inputbox>
-            </div>
-            <vscode-select id="since-select" class="w-80 mr-2">
-                <vscode-option value="s" selected>Second(s)</vscode-option>
-                <vscode-option value="m">Minute(s)</vscode-option>
-                <vscode-option value="h">Hour(s)</vscode-option>
-            </vscode-select>
-
-            <div class="tooltip ml-10 mr-2">Tail:
-                <span class="tooltiptext">Lines of recent log file to display. Defaults show all log lines.</span>
-            </div>
-            <div class="mr-2" style="width: 50px; display: inline-block">
-                <vscode-inputbox id="tail-input" type="number" value="-1"></vscode-inputbox>
-            </div>
-            <div class="float-right mr-50">
-                <vscode-button id="runBtn" class="mr-2">Run</vscode-button>
-                <vscode-button id="stopBtn" class="display-none mr-2">Stop</vscode-button>
-                <vscode-button id="clearBtn" class="display-none mr-2">Clear</vscode-button>
-                <vscode-button id="resetBtn" class="mr-2">Reset</vscode-button>
-                <vscode-button id="saveSettingsBtn" class="mr-2">Save Settings</vscode-button>
-            </div>
-            <div class="tooltip ml-10 mr-2">Destination:
-                <span class="tooltiptext">Where to display logs.</span>
-            </div>
-            <vscode-select id="destination-select" class="w-130 mr-2">
-                <vscode-option value="Webview" selected>Webview</vscode-option>
-                <vscode-option value="Terminal">Terminal</vscode-option>
-            </vscode-select>
         </div>
-        <div class="mt-5">
-            <span class="mr-2">Filter:</span>
-            <vscode-select id="filter-select" class="w-130 mr-2">
-                <vscode-option value="include" selected>that match</vscode-option>
-                <vscode-option value="exclude">that don't match</vscode-option>
-                <vscode-option value="after">after match</vscode-option>
-                <vscode-option value="before">before match</vscode-option>
-            </vscode-select>
-            <div class="mr-2" style="width: 350px; display: inline-block">
-                <vscode-inputbox placeholder="Enter your keywords" id="filter-input"></vscode-inputbox>
-            </div>
-
-            <div class="tooltip ml-10 mr-2">Wrap lines:
-                <span class="tooltiptext">Long words should be broken and wrap onto the next line.</span>
-            </div>
-            <vscode-checkbox id="wrap-chk"></vscode-checkbox>
-
-            <vscode-button id="bottomBtn" class="float-right mr-50">Scroll To Bottom</vscode-button>
-        </div>
-
-    </div>
-    <div style="position: absolute; top: 90px; bottom: 10px; width: 97%">
-        <div id="logPanel" style="overflow-y: scroll; height: 100%">
+        <div id="logs">
             <div id="innerLogPanel">
-                <code id="content" class="white-space-pre position-relative">
-                </code>
+                <code id="content" class="white-space-pre"></code>
             </div>
             <a id="bottom"></a>
         </div>
     </div>
-    </body>
+</body>
 </html>

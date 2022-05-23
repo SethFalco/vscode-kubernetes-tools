@@ -75,7 +75,7 @@ function platform(): Platform {
         return Platform.Linux;
     }
     switch (process.platform) {
-        case 'win32': return Platform.Windows;
+        case WINDOWS: return Platform.Windows;
         case 'darwin': return Platform.MacOS;
         case 'linux': return Platform.Linux;
         default: return Platform.Unsupported;
@@ -129,8 +129,11 @@ function execOpts(): any {
         env = Object.assign({ }, env, { HOME: home() });
     }
     env = shellEnvironment(env);
+
+    const { workspaceFolders } = vscode.workspace;
+
     const opts = {
-        cwd: vscode.workspace.rootPath,
+        cwd: (workspaceFolders !== undefined) ? workspaceFolders[0].uri.toString() : undefined,
         env: env,
         async: true
     };
